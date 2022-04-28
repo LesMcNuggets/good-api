@@ -1,0 +1,5 @@
+require('./column.model')
+require('./project.model')
+require('./tag.model')
+require('./task.model')
+require('./user.model')
