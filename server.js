@@ -21,7 +21,7 @@ const {
   getProject,
   addColumnToProject,
   addTaskToColumn,
-  modifyProject
+  modifyProject, modifyTask, sendMessage
 } = require("./src/controllers/project.controller");
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({extended: false}))
@@ -61,7 +61,7 @@ mongoose.connect(`mongodb+srv://${db.user}:${db.password}@${db.host}/${db.databa
         if (!projectId || !newColumnName) return;
         addColumnToProject(projectId, newColumnName).then(status => {
           if (status) {
-            getProject(projectId).then(myProject => {
+            getProject(projectId, true).then(myProject => {
               for (const column of myProject.columns) {
                 for (let task of column.tasks) task.date = moment(task.date).format('DD/MM/Y')
               }
@@ -75,7 +75,7 @@ mongoose.connect(`mongodb+srv://${db.user}:${db.password}@${db.host}/${db.databa
         if (!columnId || !taskName) return;
         addTaskToColumn(columnId, taskName).then(status => {
           if (status) {
-            getProject(projectId).then(myProject => {
+            getProject(projectId, true).then(myProject => {
               for (const column of myProject.columns) {
                 for (let task of column.tasks) task.date = moment(task.date).format('DD/MM/Y')
               }
@@ -91,7 +91,7 @@ mongoose.connect(`mongodb+srv://${db.user}:${db.password}@${db.host}/${db.databa
         })
         modifyProject(project).then(status => {
           if (status) {
-            getProject(project._id).then(myProject => {
+            getProject(project._id, true).then(myProject => {
               for (const column of myProject.columns) {
                 for (let task of column.tasks) task.date = moment(task.date).format('DD/MM/Y')
               }
@@ -100,10 +100,36 @@ mongoose.connect(`mongodb+srv://${db.user}:${db.password}@${db.host}/${db.databa
           }
         })
       })
-      // Récupérer les messages en live
-      // Envoie d'un message (broadcast)
-      // Déplacement d'une tâche
-      // Modification d'une tâche
+
+      socket.on('modifyTask', (projectId, task) => {
+        if (!projectId || !task) return;
+        modifyTask(task).then(status => {
+          if (status) {
+            getProject(projectId, true).then(myProject => {
+              for (const column of myProject.columns) {
+                for (let task of column.tasks) task.date = moment(task.date).format('DD/MM/Y')
+              }
+              io.to(projectId.toString()).emit('projectFromId', myProject)
+            })
+          }
+        })
+      })
+
+      socket.on('sendMessage', (projectId, message) => {
+        if (!projectId || !message) return;
+        sendMessage(projectId, message).then(status => {
+          console.log(status)
+          if (status) {
+            getProject(projectId).then(myProject => {
+              for (const column of myProject.columns) {
+                for (let task of column.tasks) task.date = moment(task.date).format('DD/MM/Y')
+              }
+              io.to(projectId.toString()).emit('projectFromId', myProject)
+            })
+          }
+        })
+      })
+
       socket.on('disconnect', () => console.log('user disconnected'))
     })
 

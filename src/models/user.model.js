@@ -13,6 +13,8 @@ const UserSchema = new Schema({
     unique: true,
     dropDups: true
   },
+  firstname: {type: String, required: true},
+  lastname: {type: String, required: true},
   password: {type: String, required: true},
 })
 

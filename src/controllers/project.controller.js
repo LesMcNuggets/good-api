@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 Project = require('../models/project.model')
 Column = require('../models/column.model')
 Task = require('../models/task.model')
+Message = require('../models/message.model')
 
 exports.createProject = (req, res) => {
   if (!req.body.title) {
@@ -33,22 +34,30 @@ exports.getProjects = async (userId) => {
   return Project.find({usersId: userId}).sort({lastUpdate: -1}).populate('usersId', ['id', 'email']);
 };
 
-exports.getProject = async (projectId) => Project.findOne({_id: projectId})
-  .populate([
-      {
-        path: 'columns',
-        model: 'Column',
-        populate: {
-          path: 'tasks',
+exports.getProject = async (projectId, dataGotModifed = false) => {
+  if (dataGotModifed) {
+    let newDate = Date.now()
+    await Project.findOneAndUpdate({_id: projectId}, {$set: {lastUpdate: newDate}})
+  }
+  return Project.findOne({_id: projectId})
+    .populate([
+        {
+          path: 'columns',
+          model: 'Column',
           populate: {
-            path: 'tags'
+            path: 'tasks',
+            populate: [{path: 'tags'}, {path: 'usersId', select: ['_id', 'email', 'firstname', 'lastname']}]
           }
-        }
-      },
-      {path: 'usersId', select: ['id', 'email']},
-      {path: 'tags'},
-    ]
-  )
+        },
+        {path: 'usersId', select: ['_id', 'email', 'firstname', 'lastname']},
+        {path: 'tags'},
+        {
+          path: 'messages',
+          populate: [{path: 'user', select: ['_id', 'firstname', 'lastname']}]
+        },
+      ]
+    )
+}
 
 exports.addColumnToProject = (id, columnName) => {
   const column = new Column({
@@ -81,4 +90,28 @@ exports.modifyProject = (project) => {
   return Promise.all(promises)
     .then(() => true)
     .catch(() => false)
+}
+
+exports.modifyTask = (task) => {
+  return Task.updateOne({_id: task._id}, {
+    $set: {
+      title: task.title,
+      description: task.description,
+      date: task.date,
+      tags: task.tags,
+      usersId: task.usersId,
+    },
+  }).then(() => true).catch(() => false)
+}
+
+exports.sendMessage = (idProject, message) => {
+  const newMessage = new Message({
+    content: message.content,
+    user: message.user,
+  })
+  return newMessage.save().then(msg => {
+    return Project.findOneAndUpdate({_id: idProject}, {
+      $push: {messages: msg},
+    }).then(() => true).catch(() => false)
+  }).catch(() => false)
 }

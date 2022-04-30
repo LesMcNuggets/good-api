@@ -6,7 +6,7 @@ const ProjectSchema = new Schema({
   description: {type: String, default: ""},
   columns: [{type: Schema.Types.ObjectId, ref: "Column"}],
   usersId: [{type: Schema.Types.ObjectId, ref: "User"}],
-  messages: {type: Array, default: []},
+  messages: [{type: Schema.Types.ObjectId, ref: "Message"}],
   tags: [{type: Schema.Types.ObjectId, ref: "Tag"}],
   lastUpdate: {type: Date, default: Date.now}
 })
