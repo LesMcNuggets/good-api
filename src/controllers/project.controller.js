@@ -3,6 +3,7 @@ Project = require('../models/project.model')
 Column = require('../models/column.model')
 Task = require('../models/task.model')
 Message = require('../models/message.model')
+User = require('../models/user.model')
 
 exports.createProject = (req, res) => {
   if (!req.body.title) {
@@ -113,5 +114,13 @@ exports.sendMessage = (idProject, message) => {
     return Project.findOneAndUpdate({_id: idProject}, {
       $push: {messages: msg},
     }).then(() => true).catch(() => false)
+  }).catch(() => false)
+}
+
+exports.addUserToProject = (idProject, mailUser) => {
+  return User.findOne({email: mailUser}).then(user => {
+    return Project.findOneAndUpdate({_id: idProject}, {$push: {usersId: user}}).then(
+      () => true
+    ).catch(() => false)
   }).catch(() => false)
 }

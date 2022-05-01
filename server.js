@@ -20,7 +20,7 @@ const {
   addTaskToColumn,
   modifyProject,
   modifyTask,
-  sendMessage
+  sendMessage, addUserToProject
 } = require("./src/controllers/project.controller");
 
 app.use(bodyParser.json())
@@ -100,6 +100,13 @@ mongoose.connect(`mongodb+srv://${db.user}:${db.password}@${db.host}/${db.databa
       socket.on('sendMessage', (projectId, message) => {
         if (!projectId || !message) return;
         sendMessage(projectId, message).then(status => {
+          if (status) getProjectRoutine(projectId)
+        })
+      })
+
+      socket.on('addUserToProject', (projectId, userMail) => {
+        if (!projectId || !userMail) return;
+        addUserToProject(projectId, userMail).then(status => {
           if (status) getProjectRoutine(projectId)
         })
       })
