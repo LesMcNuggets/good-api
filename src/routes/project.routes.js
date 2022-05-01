@@ -10,12 +10,6 @@ module.exports = (app) => {
     next()
   });
 
-  // app.get(
-  //   'api/project/mine',
-  //   [authJwt.verifyToken],
-  //   controller.getProjects
-  // );
-
   app.post(
     '/api/project/create',
     [authJwt.verifyToken],

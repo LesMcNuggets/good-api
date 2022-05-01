@@ -2,13 +2,6 @@ const jwt = require("jsonwebtoken");
 const config = require('../config/auth.config')
 User = require('../models/user.model')
 
-/*const Admin = new User({
-  email: 'admin@test.com',
-  password: 'ProjetMDS2022'
-})
-Admin.save((err) => {
-  if (err) throw err;
-})*/
 exports.signup = (req, res) => {
   if (!req.body.email || !req.body.password || !req.body.firstname || !req.body.lastname) {
     res.status(401).send('Please send the correct informations')
@@ -23,7 +16,10 @@ exports.signup = (req, res) => {
   })
   userToCreate.save((err) => {
     if (err) {
-      if (err.code !== 11000) res.status(401).send(err)
+      if (err.code !== 11000) {
+        res.status(401).send(err)
+        return;
+      }
     }
     this.signin(req, res)
   })
@@ -36,10 +32,10 @@ exports.signin = (req, res) => {
 
   const {email, password} = req.body
   User.findOne({email}, (err, user) => {
-    if (err) throw err
+    if (err) res.status(401).send('User not found')
 
     user.comparePassword(password, user.password, (err, isMatch) => {
-      if (err) throw err
+      if (err) res.status(401).send('Cryptic error')
       if (isMatch) {
         let token = jwt.sign({id: user._id}, config.jwtSecret, {expiresIn: 86400})
 
@@ -55,5 +51,5 @@ exports.signin = (req, res) => {
 }
 
 exports.check = (req, res) => {
-  res.status(200).send("coin!")
+  res.status(200).send("qwak!")
 }

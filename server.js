@@ -9,22 +9,32 @@ const io = require('socket.io')(server, {
     origin: '*',
   }
 });
-const json = require('body-parser');
+const bodyParser = require("body-parser");
 const {PORT} = process.env;
-
-//BDD
 const mongoose = require('mongoose')
 const {db} = require("./src/config/database.config");
-const bodyParser = require("body-parser");
 const {
   getProjects,
   getProject,
   addColumnToProject,
   addTaskToColumn,
-  modifyProject, modifyTask, sendMessage
+  modifyProject,
+  modifyTask,
+  sendMessage
 } = require("./src/controllers/project.controller");
+
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({extended: false}))
+
+const getProjectRoutine = (projectId) => {
+  getProject(projectId, true).then(myProject => {
+    for (const column of myProject.columns) {
+      for (let task of column.tasks) task.date = moment(task.date).format('DD/MM/Y')
+    }
+    io.to(projectId.toString()).emit('projectFromId', myProject)
+  })
+}
+
 mongoose.connect(`mongodb+srv://${db.user}:${db.password}@${db.host}/${db.database}?retryWrites=true&w=majority`)
   .then(() => {
     require('./src/models')
@@ -60,28 +70,14 @@ mongoose.connect(`mongodb+srv://${db.user}:${db.password}@${db.host}/${db.databa
       socket.on('addColumnToProject', (projectId, newColumnName) => {
         if (!projectId || !newColumnName) return;
         addColumnToProject(projectId, newColumnName).then(status => {
-          if (status) {
-            getProject(projectId, true).then(myProject => {
-              for (const column of myProject.columns) {
-                for (let task of column.tasks) task.date = moment(task.date).format('DD/MM/Y')
-              }
-              io.to(projectId.toString()).emit('projectFromId', myProject)
-            })
-          }
+          if (status) getProjectRoutine(projectId)
         })
       })
 
       socket.on('addTaskToColumn', (projectId, columnId, taskName) => {
         if (!columnId || !taskName) return;
         addTaskToColumn(columnId, taskName).then(status => {
-          if (status) {
-            getProject(projectId, true).then(myProject => {
-              for (const column of myProject.columns) {
-                for (let task of column.tasks) task.date = moment(task.date).format('DD/MM/Y')
-              }
-              io.to(projectId.toString()).emit('projectFromId', myProject)
-            })
-          }
+          if (status) getProjectRoutine(projectId)
         })
       })
 
@@ -90,43 +86,21 @@ mongoose.connect(`mongodb+srv://${db.user}:${db.password}@${db.host}/${db.databa
           c.tasks.map(t => console.log(t))
         })
         modifyProject(project).then(status => {
-          if (status) {
-            getProject(project._id, true).then(myProject => {
-              for (const column of myProject.columns) {
-                for (let task of column.tasks) task.date = moment(task.date).format('DD/MM/Y')
-              }
-              io.to(project._id.toString()).emit('projectFromId', myProject)
-            })
-          }
+          if (status) getProjectRoutine(project._id)
         })
       })
 
       socket.on('modifyTask', (projectId, task) => {
         if (!projectId || !task) return;
         modifyTask(task).then(status => {
-          if (status) {
-            getProject(projectId, true).then(myProject => {
-              for (const column of myProject.columns) {
-                for (let task of column.tasks) task.date = moment(task.date).format('DD/MM/Y')
-              }
-              io.to(projectId.toString()).emit('projectFromId', myProject)
-            })
-          }
+          if (status) getProjectRoutine(projectId)
         })
       })
 
       socket.on('sendMessage', (projectId, message) => {
         if (!projectId || !message) return;
         sendMessage(projectId, message).then(status => {
-          console.log(status)
-          if (status) {
-            getProject(projectId).then(myProject => {
-              for (const column of myProject.columns) {
-                for (let task of column.tasks) task.date = moment(task.date).format('DD/MM/Y')
-              }
-              io.to(projectId.toString()).emit('projectFromId', myProject)
-            })
-          }
+          if (status) getProjectRoutine(projectId)
         })
       })
 
@@ -135,7 +109,6 @@ mongoose.connect(`mongodb+srv://${db.user}:${db.password}@${db.host}/${db.databa
 
     require('./src/routes/user.routes')(app)
     require('./src/routes/project.routes')(app)
-
 
     server.listen(PORT, () => {
       console.log(`Listening on port : ${PORT}`)
